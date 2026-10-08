@@ -1,0 +1,78 @@
+pipeline {
+
+    agent any
+
+    tools {
+        jdk 'JDK21'
+        maven 'Maven3'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                sh 'mvn validate'
+            }
+        }
+
+        stage('Compile') {
+            steps {
+                sh 'mvn compile'
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh 'mvn test'
+            }
+
+            post {
+                always {
+                    junit allowEmptyResults: true,
+                          testResults: 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('Archive Artifact') {
+            steps {
+                archiveArtifacts(
+                    artifacts: 'target/*.jar',
+                    fingerprint: true
+                )
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo 'Java CI Pipeline completed successfully'
+        }
+
+        failure {
+            echo 'Java CI Pipeline failed'
+        }
+
+        always {
+            echo 'Pipeline execution finished'
+        }
+    }
+}
